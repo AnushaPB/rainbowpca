@@ -1,0 +1,239 @@
+---
+title: "rainbowpca"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{rainbowpca}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+`rainbowpca` allows for visualizing multivariate, continuous genetic structure across space by converting principal component axes into RGB color space. Each sample receives a color based on its position along three PC axes, allowing genetic (or other) variation to mapped without the need for clustering or geographic labels.
+
+## Setup
+
+```{r setup, message = FALSE, warning = FALSE}
+library(rainbowpca)
+library(dplyr)
+library(vcfR)
+library(sf)
+library(ggplot2)
+library(tigris)
+```
+
+## Load example data
+
+The package includes example coordinate and VCF data from Bouzid et al. 2022 (DOI: 10.1111/mec.15836). The data consist of 101 samples of the lizard *Sceloporus occidentalis* genotyped at 6,944 SNPs across California.
+
+```{r load-data}
+data("liz_coords")
+data("liz_vcf")
+```
+
+## Run PCA on genotype data
+
+First, we extract genotypes from the VCF. Missing values are imputed using the median genotype value and invariant sites are removed before PCA.
+
+```{r run-pca}
+# Extract genotype matrix
+gt <- extract.gt(liz_vcf, element = "GT", as.numeric = TRUE)
+
+# Impute missing values
+gt[is.na(gt)] <- median(gt, na.rm = TRUE)
+
+# Transpose so rows are individuals and columns are loci
+gt <- t(gt)
+
+# Remove invariant sites
+gt <- gt[, apply(gt, 2, var) > 0]
+
+# Run PCA
+pca_result <- prcomp(gt, center = TRUE, scale. = TRUE)
+
+# Extract PCA scores
+pcs <- pca_result$x
+
+# Calculate variance explained by each PC
+varexp <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+
+# Screeplot to visualize variance explained
+plot(varexp, type = "b", xlab = "Principal Component", ylab = "Proportion of Variance Explained")
+```
+
+If you have run PCA using another method (e.g., PLINK), you can  import these values directly; just provide a matrix or data frame where the rows are samples and the columns are PC axes.
+
+## Convert PCs to RGB colors
+
+The `pca_to_rgb()` function takes a matrix or data frame of PCA scores and converts three PC axes into RGB colors. The `order` argument controls which PC is assigned to the red, green, and blue channels. The default order is `c(1, 2, 3)`, which means that PC1 is assigned to red, PC2 to green, and PC3 to blue and all other PCs are ignored. You can use any combination of PC axes, but the first three are typically the most informative for visualizing structure since they explain the most variance.
+
+```{r pca-to-rgb}
+rgb_df <- pca_to_rgb(pcs, order = c(1, 2, 3))
+
+head(rgb_df)
+```
+
+The resulting data frame contains three columns for the red, green, and blue color values (ranging from 0 to 1) as well as a combined `color` column with hexadecimal color codes that can be used directly in plotting.
+
+## Prepare spatial data
+
+Next, we convert the sample coordinates to an `sf` object. We also download a simple state boundary map to use as an optional background map.
+
+```{r spatial-data, message = FALSE, warning = FALSE}
+# The original coordinates are in longitude and latitude (EPSG:4326). We transform them to a projected coordinate system (EPSG:3310) for better visualization. EPSG:3310 is a common projection for California that preserves area and distance relationships. 
+# IMPORTANT: Make sure to use the correct coordinate reference system (CRS) for your data. If your coordinates are in a different CRS, you will need to adjust the `crs` argument in `st_as_sf()` and `st_transform()` accordingly.
+coords_sf <- 
+  st_as_sf(liz_coords, coords = c("x", "y"), crs = 4326) %>%
+  st_transform(crs = 3310)
+
+# Download state boundaries for the contiguous US (CONUS) to use as a background map. We crop the map to a buffer around our sample coordinates.
+conus <- states(cb = TRUE, resolution = "20m") %>% 
+  st_as_sf()
+
+conus_crop <- 
+  conus %>% 
+  st_transform(crs = 3310) %>%
+  st_crop(st_buffer(coords_sf, dist = 10e3))
+```
+
+Now we combine the coordinates, RGB colors, and PCA scores into one plotting object.
+
+```{r combine-data}
+plot_df <- 
+  coords_sf %>%
+  bind_cols(rgb_df) %>%
+  # Keep only the first three PCs for plotting
+  bind_cols(pcs[, 1:3]) 
+```
+
+## Plot samples in PCA space
+
+A standard PCA plot helps show how the colors correspond to variation along the first two axes.
+
+```{r pca-plot}
+plot_pca <-
+  ggplot(plot_df) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey70") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey70") +
+  geom_point(aes(x = PC1, y = PC2, color = color), size = 3) +
+  scale_color_identity() +
+  theme_classic()
+
+plot_pca
+```
+
+You can also plot other combinations of PC axes (e.g., PC2 vs. PC3) to see how colors correspond to variation along different axes. 
+
+```{r}
+ggplot(plot_df) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey70") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey70") +
+  geom_point(aes(x = PC2, y = PC3, color = color), size = 3) +
+  # Use the color values directly without applying a color scale
+  scale_color_identity() +
+  theme_classic()
+```
+
+See below for 3D PCA plotting of all three axes with `plotly`.
+
+## Map PCA colors in space
+
+We can now plot the RGB colors in geographic space. Each point is colored according to its position along the first three PC axes, allowing us to visualize how multivariate structure maps onto geography.
+
+```{r map-plot}
+plot_map <-
+  ggplot() +
+  # Backround map of CONUS (optional)
+  geom_sf(data = conus_crop, fill = "grey95", color = "grey70") +
+  # Sample points colored by PCA
+  geom_sf(data = plot_df, aes(color = color), size = 3) +
+  # Use the color values directly without applying a color scale
+  scale_color_identity() +
+  theme_void()
+
+plot_map
+```
+
+## Combine PCA and map views
+
+We can also create a combined plot showing the PCA and map side by side for easier comparison.
+```{r combined-plot, message = FALSE, warning = FALSE}
+library(cowplot)
+
+combined_plot <- 
+  plot_grid(
+    plot_pca,
+    plot_map,
+    ncol = 2,
+    # Adjust relative widths of the two plots (optional)
+    rel_widths = c(2, 1),
+    labels = c("A", "B")
+  )
+
+combined_plot
+```
+
+## Interactive 3D PCA plot
+
+Because RGB colors are based on three PC axes, it can also be useful to view the first three PCs interactively in 3D space. The `plotly` package allows us to create an interactive 3D scatter plot where the axes correspond to PC1, PC2, and PC3 and the points are colored according to their RGB values.
+
+This is not rendered in this vignette because it requires an interactive environment.
+
+```{r plotly-3d, eval = FALSE}
+# Install plotly if you don't have it already
+if (!requireNamespace("plotly", quietly = TRUE)) {
+  install.packages("plotly")
+}
+library(plotly)
+
+fig <- plot_ly(
+  plot_df,
+  x = ~PC1,
+  y = ~PC2,
+  z = ~PC3,
+  type = "scatter3d",
+  mode = "markers",
+  marker = list(
+    size = 4,
+    color = plot_df$color
+  )
+)
+
+fig <- fig %>%
+  layout(
+    scene = list(
+      xaxis = list(
+        title = paste0("PC1 (", round(varexp[1] * 100, 1), "%)")
+      ),
+      yaxis = list(
+        title = paste0("PC2 (", round(varexp[2] * 100, 1), "%)")
+      ),
+      zaxis = list(
+        title = paste0("PC3 (", round(varexp[3] * 100, 1), "%)")
+      )
+    )
+  )
+
+fig
+```
+
+## Changing PC channel order
+
+The `order` argument can be used to assign different PCs to the red, green, and blue channels. For example, this assigns PC2 to red, PC1 to green, and PC3 to blue:
+
+```{r channel-order-example}
+rgb_alt <- pca_to_rgb(pcs[, 1:3], order = c(2, 1, 3))
+
+head(rgb_alt)
+```
+
+Changing the order does not change the PCA results. It only changes how axes are translated into color.
