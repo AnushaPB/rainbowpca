@@ -7,11 +7,11 @@ rainbowpca is an R package for mapping multivariate structure using
 RGB-encoded principal components. The package converts principal
 component (PC) axes into red, green, and blue color channels, allowing
 continuous variation in multivariate data to be visualized directly in
-geographic space or PCA space.
+geographic space.
 
 Although developed primarily for population genetic and landscape
-genomic analyses, rainbowpca can be applied to any multivariate dataset
-where the first three principal components capture meaningful continuous
+genomic analyses, rainbowpca can be applied to any dataset where the
+first three principal components capture meaningful continuous
 structure.
 
 ## Installation
@@ -99,6 +99,7 @@ occidentalis* across California using RGB-encoded PCA axes.
 RGB-based PCA visualization has been used previously in population
 genetics and related fields, including methods such as
 `adegenet::colorplot()`, some empirical studies (e.g., DOI:
-10.1016/j.xpro.2023.102567) and the GDM package, which uses a similar
-RGB approach to visualize modelled compositional dissimilarity across
-space.
+10.1016/j.xpro.2023.102567), and the GDM package, which uses a similar
+approach to visualize modelled compositional dissimilarity across space.
+rainbowpca provides a streamlined and flexible workflow for these types
+of visualizations.
