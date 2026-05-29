@@ -93,4 +93,4 @@ This example maps continuous genetic structure in *Sceloporus occidentalis* acro
 
 ## Related approaches
 
-This approach is inspired by Generalized Dissimilarity Modelling and the `gdm` package, which uses a similar approach to visualize compositional dissimilarity across space. RGB encoding of principal component axes has also been used previously in population genetics and related fields, including the colorplot() function in the adegenet package; rainbowpca extends this idea by providing a generalizable and reproducible mapping workflow.
+This approach is inspired by Generalized Dissimilarity Modelling and the gdm package, which uses a similar approach to visualize compositional dissimilarity across space. RGB encoding of principal component axes has also been used previously in population genetics and related fields, including the `colorplot()` function in the adegenet package; rainbowpca extends this idea by providing a generalizable and reproducible mapping workflow.

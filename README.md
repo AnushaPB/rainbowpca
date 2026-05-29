@@ -106,9 +106,9 @@ occidentalis* across California using RGB-encoded PCA axes.
 ## Related approaches
 
 This approach is inspired by Generalized Dissimilarity Modelling and the
-`gdm` package, which uses a similar approach to visualize compositional
+gdm package, which uses a similar approach to visualize compositional
 dissimilarity across space. RGB encoding of principal component axes has
 also been used previously in population genetics and related fields,
-including the colorplot() function in the adegenet package; rainbowpca
+including the `colorplot()` function in the adegenet package; rainbowpca
 extends this idea by providing a generalizable and reproducible mapping
 workflow.
