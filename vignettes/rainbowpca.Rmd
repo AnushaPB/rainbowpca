@@ -29,6 +29,7 @@ library(vcfR)
 library(sf)
 library(ggplot2)
 library(tigris)
+library(cowplot)
 ```
 
 ## Load example data
@@ -163,6 +164,13 @@ plot_map <-
 plot_map
 ```
 
+To interpret these maps, just remember **more similar colors = more similar genetic composition**. 
+
+In this example, redder colors indicate samples with higher values along PC1, greener colors indicate samples with higher values along PC2, and bluer colors indicate samples with high values along PC3. Samples that are intermediate along these axes will have mixed colors (e.g., yellow for high PC1 and PC2, cyan for high PC2 and PC3, etc.). 
+
+In this dataset we can see a steep transition in southern California where colors change rapidly from yellow to purple, indicating a stronger genetic break. In contrast, from east to west across the center of california we see gradual transitions in color, indicating more gradual turnover in genetic structure.
+ 
+
 ## Combine PCA and map views
 
 We can also create a combined plot showing the PCA and map side by side for easier comparison.
@@ -182,11 +190,71 @@ combined_plot <-
 combined_plot
 ```
 
+## Plotting individual principal component axes
+
+To gain intuition for how the RGB colors are derived from the PCA axes, we can also plot each PC axis separately in geographic space. This can help show how variation along each axis maps onto geography and contributes to the overall RGB colors.
+
+```{r individual-pc-maps}
+# PC1 map
+pc1_plot <- 
+  ggplot() +
+  geom_point(data = plot_df, aes(x = PC1, y = PC2, color = PC1), size = 3) +
+  scale_color_gradient(low = "black", high = "red") +
+  theme_classic() +
+  theme(legend.position = "none")
+
+pc1_map <-
+  ggplot() +
+  geom_sf(data = conus_crop, fill = "grey95", color = "grey70") +
+  geom_sf(data = plot_df, aes(color = PC1), size = 3) +
+  scale_color_gradient(low = "black", high = "red") +
+  theme_void()  
+
+# PC2 map
+pc2_plot <- 
+  ggplot() +
+  geom_point(data = plot_df, aes(x = PC1, y = PC2, color = PC2), size = 3) +
+  scale_color_gradient(low = "black", high = "green") +
+  theme_classic()  +
+  theme(legend.position = "none")
+
+pc2_map <-
+  ggplot() +
+  geom_sf(data = conus_crop, fill = "grey95", color = "grey70") +
+  geom_sf(data = plot_df, aes(color = PC2), size = 3) +
+  scale_color_gradient(low = "black", high = "green") +
+  theme_void()  
+
+# PC3 map
+pc3_plot <- 
+  ggplot() +
+  geom_point(data = plot_df, aes(x = PC2, y = PC3, color = PC3), size = 3) +
+  scale_color_gradient(low = "black", high = "blue") +
+  theme_classic()  +
+  theme(legend.position = "none")
+
+pc3_map <-
+  ggplot() +
+  geom_sf(data = conus_crop, fill = "grey95", color = "grey70") +
+  geom_sf(data = plot_df, aes(color = PC3), size = 3) +
+  scale_color_gradient(low = "black", high = "blue") +
+  theme_void()  
+
+plot_grid(
+  pc1_plot, pc2_plot, pc3_plot,
+  pc1_map, pc2_map, pc3_map,
+  ncol = 3
+)
+
+```
+
 ## Interactive 3D PCA plot
 
 Because RGB colors are based on three PC axes, it can also be useful to view the first three PCs interactively in 3D space. The `plotly` package allows us to create an interactive 3D scatter plot where the axes correspond to PC1, PC2, and PC3 and the points are colored according to their RGB values.
 
-This is not rendered in this vignette because it requires an interactive environment.
+This is not rendered in this vignette because it requires an interactive environment, but here is an example of what the plot looks like:
+
+![](figures/3d_pca_example.png)
 
 ```{r plotly-3d, eval = FALSE}
 # Install plotly if you don't have it already
@@ -207,21 +275,6 @@ fig <- plot_ly(
     color = plot_df$color
   )
 )
-
-fig <- fig %>%
-  layout(
-    scene = list(
-      xaxis = list(
-        title = paste0("PC1 (", round(varexp[1] * 100, 1), "%)")
-      ),
-      yaxis = list(
-        title = paste0("PC2 (", round(varexp[2] * 100, 1), "%)")
-      ),
-      zaxis = list(
-        title = paste0("PC3 (", round(varexp[3] * 100, 1), "%)")
-      )
-    )
-  )
 
 fig
 ```

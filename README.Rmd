@@ -15,7 +15,9 @@ knitr::opts_chunk$set(
 
 # rainbowpca
 
-rainbowpca is an R package for mapping multivariate structure using RGB-encoded principal components. The package converts principal component (PC) axes into red, green, and blue color channels, allowing continuous variation in multivariate data to be visualized directly in geographic space.
+rainbowpca is an R package for mapping continuous genetic structure using RGB-encoded principal components. By converting principal component (PC) axes into red, green, and blue color channels, this package provides a simple and intuitive way to visualize spatial patterns of genetic variation, where samples with more similar colors have more similar genetic composition.
+
+A major advantage of this visualization is that it represents genetic variation continuously rather than discretely. The transitions between colors can therefore reveal whether turnover in genetic structure across space is gradual or abrupt. In contrast, visualizations based on discrete clusters require users to specify the number of genetic groups and treat all transitions between groups as equivalent, making it difficult to distinguish between gradual clines and sharp breaks.
 
 Although developed primarily for population genetic and landscape genomic analyses, rainbowpca can be applied to any dataset where the first three principal components capture meaningful continuous structure.
 
@@ -89,6 +91,6 @@ ggplot(plot_df) +
 
 This example maps continuous genetic structure in *Sceloporus occidentalis* across California using RGB-encoded PCA axes.
 
-## Note
+## Related approaches
 
-RGB-based PCA visualization has been used previously in population genetics and related fields, including methods such as `adegenet::colorplot()`, some empirical studies (e.g., DOI: 10.1016/j.xpro.2023.102567), and the GDM package, which uses a similar approach to visualize modelled compositional dissimilarity across space. rainbowpca provides a streamlined and flexible workflow for these types of visualizations.
+This approach is inspired by Generalized Dissimilarity Modelling and the `gdm` package, which uses a similar approach to visualize compositional dissimilarity across space. RGB encoding of principal component axes has also been used previously in population genetics and related fields, including the colorplot() function in the adegenet package; rainbowpca extends this idea by providing a generalizable and reproducible mapping workflow.
