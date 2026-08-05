@@ -35,15 +35,23 @@ pak::pak("AnushaPB/rainbowpca")
 
 ## Example
 
-``` r
+Load libraries:
 
+``` r
 library(rainbowpca)
 library(vcfR)
 library(dplyr)
 library(sf)
 library(ggplot2)
 library(tigris)
+library(cowplot)
+```
 
+Run PCA: (Note - you can also run PCA externally using your program of
+choice and import the first three PCs as a data frame. Just make sure
+the order matches your coordinates!)
+
+``` r
 # Load example data
 data("liz_coords")
 data("liz_vcf")
@@ -61,7 +69,12 @@ gt <- gt[, apply(gt, 2, var) > 0]
 # Run PCA
 pca_result <- prcomp(gt, center = TRUE, scale. = TRUE)
 pcs <- pca_result$x[, 1:3] # First three PCs
+```
 
+If you wanted to use your own PCA results, you would do it here instead
+of the above code. For example: `pcs <- read.csv("my_pca_results.csv")`
+
+``` r
 # Convert first three PCs to RGB colors
 rgb_df <- pca_to_rgb(pcs)
 
@@ -76,32 +89,34 @@ conus <-
   states(cb = TRUE, resolution = "20m") %>%
   st_transform(crs = st_crs(plot_df)) %>%
   st_crop(plot_df)
-```
+#> Retrieving data for the year 2024
+#>   |                                                                              |                                                                      |   0%  |                                                                              |=                                                                     |   1%  |                                                                              |=======                                                               |  10%  |                                                                              |=============                                                         |  19%  |                                                                              |======================                                                |  32%  |                                                                              |========================                                              |  35%  |                                                                              |============================                                          |  39%  |                                                                              |==================================                                    |  48%  |                                                                              |===================================                                   |  51%  |                                                                              |==========================================                            |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=====================================================                 |  75%  |                                                                              |==============================================================        |  89%  |                                                                              |====================================================================  |  97%  |                                                                              |======================================================================| 100%
+#> Warning: attribute variables are assumed to be spatially constant throughout
+#> all geometries
 
-``` r
 # Plot PCA
-ggplot(plot_df) +
+pca_plot <- 
+  ggplot(plot_df) +
   geom_point(aes(x = PC1, y = PC2, color = color), size = 3) +
   scale_color_identity() +
   theme_classic()
-```
-
-<img src="man/figures/README-unnamed-chunk-3-1.png" width="100%" />
-
-``` r
 
 # Plot map
-ggplot(plot_df) +
+map_plot <-
+  ggplot(plot_df) +
   geom_sf(data = conus) +
   geom_sf(aes(color = color), size = 3) +
   scale_color_identity() +
   theme_void()
+
+# Combine
+plot_grid(pca_plot, map_plot, nrow = 1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-3-2.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
 
-This example maps continuous genetic structure in *Sceloporus
-occidentalis* across California using RGB-encoded PCA axes.
+This example map shows the continuous genetic structure of *Sceloporus
+occidentalis* across the western US based on RGB-encoded PCA axes.
 
 ## Related approaches
 
